@@ -17,3 +17,5 @@
 export { ISignerSolana } from './signer-solana.js'
 export { default as SeedSignerSolana } from './seed-signer-solana.js'
 export { default as LedgerSignerSolana } from './ledger-signer-solana.js'
+export { default as SolanaSigner } from './bare-solana-signer.js'
+export { default as PrivateKeySolanaSigner } from './bare-private-key-signer-solana.js'

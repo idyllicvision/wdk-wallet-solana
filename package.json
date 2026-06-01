@@ -1,5 +1,5 @@
 {
-  "name": "@tetherto/wdk-wallet-solana",
+  "name": "@idyllicvision/wdk-wallet-solana",
   "version": "1.0.0-beta.6",
   "description": "A simple package to manage BIP-32 wallets for the solana blockchain.",
   "keywords": [
@@ -12,7 +12,7 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git://github.com/tetherto/wdk-wallet-solana.git"
+    "url": "git://github.com/idyllicvision/wdk-wallet-solana.git"
   },
   "main": "index.js",
   "type": "module",
@@ -26,6 +26,7 @@
     "test:coverage:html": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --coverage --coverageReporters=html text"
   },
   "dependencies": {
+    "@idyllicvision/bare-universal-signer": "^1.0.0-beta.2",
     "@ledgerhq/device-management-kit": "1.0.1",
     "@ledgerhq/device-signer-kit-solana": "1.6.1",
     "@ledgerhq/device-transport-kit-web-hid": "1.2.3",
@@ -42,6 +43,7 @@
     "@solana/transactions": "6.0.1",
     "@tetherto/wdk-failover-provider": "1.0.0-beta.1",
     "@tetherto/wdk-wallet": "github:claudiovb/wdk-wallet#poc-signer",
+    "bare-buffer": "3.4.2",
     "bare-node-runtime": "^1.1.4",
     "bip39": "3.1.0",
     "micro-key-producer": "0.7.6",
