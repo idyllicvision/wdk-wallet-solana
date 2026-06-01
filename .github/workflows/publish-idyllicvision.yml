@@ -1,0 +1,133 @@
+name: publish-idyllicvision
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: publish-idyllicvision
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v6
+
+      # registry-url + scope are required so setup-node writes
+      # @idyllicvision auth + scope mapping to $NPM_CONFIG_USERCONFIG.
+      # Without registry-url, setup-node skips configAuthentication() and
+      # $NPM_CONFIG_USERCONFIG is never exported.
+      - name: Set up Node 22.19.0
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22.19.0'
+          cache: 'npm'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@idyllicvision'
+
+      - name: Force HTTPS for GitHub git dependencies
+        run: |
+          git config --global url."https://github.com/".insteadOf "git@github.com:"
+          git config --global --add url."https://github.com/".insteadOf "ssh://git@github.com/"
+
+      - name: Install dependencies
+        # setup-node wrote `//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}`
+        # to $NPM_CONFIG_USERCONFIG; the placeholder is expanded at npm
+        # invocation time, so NODE_AUTH_TOKEN must be set on this step.
+        # npm.pkg.github.com requires auth even for public reads of
+        # @idyllicvision/bare-universal-signer.
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm clean-install
+
+      - name: Lint code with standard
+        run: npm run lint
+
+      - name: Run tests
+        run: npm test
+
+  publish:
+    needs: test
+    # Temporary gate: only publish from bare-signer while the signer refactor
+    # is pre-release. Also restrict to the idyllicvision fork so dispatches
+    # on upstream/other forks that share the branch name are skipped before
+    # hitting an auth failure. Replace with a release-event trigger once it
+    # merges to main.
+    if: github.ref == 'refs/heads/bare-signer' && github.repository == 'idyllicvision/wdk-wallet-solana'
+    runs-on: ubuntu-latest
+    environment: github-packages-publish
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Node 22.19.0
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22.19.0'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@idyllicvision'
+
+      # Debug: surface the merged npm config (registry + scope) that
+      # setup-node produced for the following auth-sensitive steps.
+      # setup-node writes auth to $NPM_CONFIG_USERCONFIG (a temp file), not
+      # ~/.npmrc, so ask npm for the resolved config instead of cat'ing a
+      # path that may not exist.
+      - name: Show merged .npmrc
+        run: |
+          echo "NPM_CONFIG_USERCONFIG=$NPM_CONFIG_USERCONFIG"
+          npm config list
+
+      - name: Force HTTPS for GitHub git dependencies
+        run: |
+          git config --global url."https://github.com/".insteadOf "git@github.com:"
+          git config --global --add url."https://github.com/".insteadOf "ssh://git@github.com/"
+
+      - name: Install dependencies
+        # setup-node wrote `//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}`
+        # to $NPM_CONFIG_USERCONFIG; that placeholder is expanded at npm
+        # invocation time, so NODE_AUTH_TOKEN must be set on this step too.
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm clean-install
+
+      - name: Compute next beta version
+        # npm view against GitHub Packages requires auth even for public reads.
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Capture into a local var first: `echo "VAR=$(cmd)" >> file` does
+          # not propagate $(cmd)'s exit code under pipefail, and $GITHUB_ENV
+          # only propagates to subsequent steps — not this same shell.
+          VERSION=$(node .github/scripts/compute-next-beta.js \
+            --package-name @idyllicvision/wdk-wallet-solana \
+            --registry https://npm.pkg.github.com)
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "Publishing version: $VERSION" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Rewrite package.json for GitHub Packages
+        run: |
+          node .github/scripts/prepare-package.js \
+            --name @idyllicvision/wdk-wallet-solana \
+            --version "$VERSION" \
+            --registry https://npm.pkg.github.com \
+            --repository-url git+https://github.com/idyllicvision/wdk-wallet-solana.git
+
+      # Preflight: exercise the full publish pipeline (manifest validation,
+      # tarball assembly, auth, registry endpoint) without mutating the
+      # registry. Cheap insurance against a malformed rewrite or token scope
+      # regression leaving the job half-done.
+      - name: Verify publish (dry-run)
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm publish --dry-run
+
+      - name: Publish to GitHub Packages
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

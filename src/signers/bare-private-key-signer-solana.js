@@ -17,7 +17,7 @@ import { Signer } from '@idyllicvision/bare-universal-signer'
  * Solana signer backed by a raw private key stored in the iOS Keychain.
  * Compatible with ISignerSolana (wdk-wallet-solana). No HD derivation supported.
  */
-export default class PrivateKeySolanaSigner {
+export default class BarePrivateKeySolanaSigner {
   /**
    * @param {PrivateKeySignerSolanaConfig} [config={}]
    */
@@ -114,9 +114,12 @@ export default class PrivateKeySolanaSigner {
 
     const addr = await this.getAddress()
 
+    // Merge this signer's signature into the existing signatures map, preserving
+    // any pre-existing signatures (e.g. multisig co-signers, separate fee payer).
     const signedTx = getTransactionEncoder().encode({
       messageBytes: tx.messageBytes,
       signatures: {
+        ...tx.signatures,
         [addr]: signatureBytes(new Uint8Array(sigBytes))
       }
     })

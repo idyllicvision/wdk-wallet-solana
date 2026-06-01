@@ -24,7 +24,7 @@ const DEFAULT_PATH = "m/44'/501'/0'/0'"
  * Private keys never leave the keychain — only signatures and public keys
  * are returned.
  */
-export default class SolanaSigner {
+export default class BareSolanaSigner {
   /**
    * Create a new Solana signer.
    * @param {SolanaSignerConfig} [config={}]
@@ -80,10 +80,21 @@ export default class SolanaSigner {
   }
 
   /**
+   * Throws if the signer has been disposed.
+   * @private
+   */
+  _assertActive () {
+    if (!this._isActive) {
+      throw new Error('The signer has been disposed.')
+    }
+  }
+
+  /**
    * Get the raw 32-byte ed25519 public key.
    * @returns {Promise<Uint8Array>}
    */
   async getPublicKey () {
+    this._assertActive()
     if (this._publicKey) return this._publicKey
     this._publicKey = await this._bareSigner.getPublicKey({
       path: this._path,
@@ -116,7 +127,7 @@ export default class SolanaSigner {
    *
    * @param {string} relPath - Relative path, e.g. "0'/0'" for account 0
    * @param {object} [cfg={}] - Optional keychain option overrides
-   * @returns {SolanaSigner}
+   * @returns {BareSolanaSigner}
    */
   derive (relPath, cfg = {}) {
     if (!relPath || typeof relPath !== 'string') {
@@ -129,7 +140,7 @@ export default class SolanaSigner {
     const fullPath = `${BIP44_SOL_PREFIX}/${relPath}`
     const mergedOpts = Object.assign({}, this._opts, cfg)
 
-    const child = new SolanaSigner({
+    const child = new BareSolanaSigner({
       bareSigner: this._bareSigner,
       path: fullPath,
       keychainOpts: mergedOpts
@@ -145,6 +156,7 @@ export default class SolanaSigner {
    * @returns {Promise<string>} 128-character hex-encoded 64-byte signature
    */
   async sign (message) {
+    this._assertActive()
     const messageBytes = Buffer.from(message, 'utf8')
     const sigBytes = await this._bareSigner.sign({
       path: this._path,
@@ -182,6 +194,7 @@ export default class SolanaSigner {
    * @returns {Promise<Buffer>} Signed transaction in wire format
    */
   async signTransaction (unsignedTx) {
+    this._assertActive()
     const tx = getTransactionDecoder().decode(Buffer.from(unsignedTx))
 
     // Sign the message bytes with ed25519 (key stays in the iOS Keychain)
@@ -194,9 +207,12 @@ export default class SolanaSigner {
 
     const addr = await this.getAddress()
 
+    // Merge this signer's signature into the existing signatures map, preserving
+    // any pre-existing signatures (e.g. multisig co-signers, separate fee payer).
     const signedTx = getTransactionEncoder().encode({
       messageBytes: tx.messageBytes,
       signatures: {
+        ...tx.signatures,
         [addr]: signatureBytes(new Uint8Array(sigBytes))
       }
     })
@@ -214,4 +230,4 @@ export default class SolanaSigner {
   }
 }
 
-export { SolanaSigner }
+export { BareSolanaSigner as SolanaSigner }

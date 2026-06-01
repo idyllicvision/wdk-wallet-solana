@@ -32,6 +32,6 @@ export { default as WalletAccountReadOnlySolana } from './src/wallet-account-rea
 
 export { default as WalletAccountSolana } from './src/wallet-account-solana.js'
 
-export { default as SolanaSigner } from './src/signers/solana-signer.js'
-export { default as PrivateKeySolanaSigner } from './src/signers/keychain-private-key-signer-solana.js'
+export { default as SolanaSigner } from './src/signers/bare-solana-signer.js'
+export { default as PrivateKeySolanaSigner } from './src/signers/bare-private-key-signer-solana.js'
 export { getDefaultBareSigner } from './src/bare-signer.js'
