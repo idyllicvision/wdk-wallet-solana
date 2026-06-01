@@ -243,7 +243,12 @@ export default class SeedSignerSolana {
   }
 
   dispose () {
-    sodium_memzero(this._rawPrivateKey)
+    // `_rawPrivateKey` is only populated once the signer has signed/connected;
+    // disposing before then leaves it undefined, and sodium_memzero() throws on
+    // a non-typed-array. Only wipe it when it's actually present.
+    if (this._rawPrivateKey) {
+      sodium_memzero(this._rawPrivateKey)
+    }
     this._root = undefined
     this._account = undefined
     this._address = undefined

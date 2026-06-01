@@ -94,10 +94,10 @@ export default class WalletManagerSolana extends WalletManager {
    * // Returns the account with derivation path m/44'/501'/index'/0'
    * const account = await wallet.getAccount(1);
    * @param {number} [index] - The index of the account to get (default: 0).
-   * @param {string} [signerName] - The signer name to resolve from the wallet manager (default: 'default').
+   * @param {string} [signerName] - Registered signer name; omit for the default signer.
    * @returns {Promise<WalletAccountSolana>} The account.
    */
-  async getAccount (index = 0, signerName = 'default') {
+  async getAccount (index = 0, signerName) {
     return await this.getAccountByPath(`${index}'/0'`, signerName)
   }
 
@@ -108,11 +108,14 @@ export default class WalletManagerSolana extends WalletManager {
    * // Returns the account with derivation path m/44'/501'/0'/0'/1'
    * const account = await wallet.getAccountByPath("0'/0'/1'");
    * @param {string} path - The derivation path (e.g. "0'/0'/0'").
-   * @param {string} [signerName] - The signer name to resolve from the wallet manager (default: 'default').
+   * @param {string} [signerName] - Registered signer name; omit for the default signer.
    * @returns {Promise<WalletAccountSolana>} The account.
    */
-  async getAccountByPath (path, signerName = 'default') {
-    const key = `${signerName}:${path}`
+  async getAccountByPath (path, signerName) {
+    // The base resolves the default signer via getSigner(undefined); passing the
+    // literal 'default' would look up a named signer and throw. Use the name only
+    // for the cache key.
+    const key = `${signerName ?? 'default'}:${path}`
 
     if (!this._accounts[key]) {
       const signer = this.getSigner(signerName)
