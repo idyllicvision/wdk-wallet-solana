@@ -21,9 +21,9 @@
     "build:types": "tsc",
     "lint": "standard --env jest",
     "lint:fix": "standard --fix --env jest",
-    "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest",
-    "test:coverage": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --coverage",
-    "test:coverage:html": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --coverage --coverageReporters=html text"
+    "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --runInBand",
+    "test:coverage": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --coverage  --runInBand",
+    "test:coverage:html": "cross-env NODE_OPTIONS=--experimental-vm-modules jest  --runInBand --coverage --coverageReporters=html text"
   },
   "dependencies": {
     "@idyllicvision/bare-universal-signer": "^1.0.0-beta.2",
