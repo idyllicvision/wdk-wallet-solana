@@ -56,7 +56,7 @@ jobs:
     # on upstream/other forks that share the branch name are skipped before
     # hitting an auth failure. Replace with a release-event trigger once it
     # merges to main.
-    if: github.ref == 'refs/heads/bare-signer' && github.repository == 'idyllicvision/wdk-wallet-solana'
+    if: github.repository == 'idyllicvision/wdk-wallet-solana'
     runs-on: ubuntu-latest
     environment: github-packages-publish
     permissions:
